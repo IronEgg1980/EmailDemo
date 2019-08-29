@@ -42,7 +42,6 @@ final class EmailDowloader extends AsyncTask<Void, Integer, Void> {
     protected void onProgressUpdate(Integer... values) {
         int flag = values[0];
         int value = values[1];
-        Log.d(TAG, "onProgressUpdate: " + flag + "/" + System.currentTimeMillis());
         switch (flag) {
             case 0:
                 dowloadDialogFragment.setTitle("正在读取邮件...");
@@ -104,13 +103,14 @@ final class EmailDowloader extends AsyncTask<Void, Integer, Void> {
         for (int i = 0, count = messages.length; i < count; i++) {
             MimeMessage msg = (MimeMessage) messages[i];
             String title = ReceiveEmail.getSubject(msg);
+            int index = title.lastIndexOf("r") + 1;
             String from = ReceiveEmail.getFrom(msg);
             if (from.contains("yinzongwang") && title.contains("specialrecorder")) {
-                message = "主题：" + title + "发件人：" + from;
                 publishProgress(1, 0);
-                int size = msg.getSize();
-                publishProgress(3, 0, size);
                 downloadFile(msg);
+                StringBuilder builder = new StringBuilder();
+                ReceiveEmail.getMailTextContent(msg,builder);
+                message = "主题：" + title + "发件人：" + from+builder.toString();
             }
         }
         //释放资源
@@ -121,30 +121,29 @@ final class EmailDowloader extends AsyncTask<Void, Integer, Void> {
     private void downloadFile(MimeMessage msg) throws Exception {
         Multipart multipart = (Multipart) msg.getContent();
         int downloadCount = 0;
-        for (int i = 0, count = multipart.getCount(); i < count; i++) {
-            BodyPart bodyPart = multipart.getBodyPart(i);
-            //某一个邮件体也有可能是由多个邮件体组成的复杂体
-            String disp = bodyPart.getDisposition();
-            if (disp != null && (disp.equalsIgnoreCase(Part.ATTACHMENT) || disp.equalsIgnoreCase(Part.INLINE))) {
-                InputStream is = bodyPart.getInputStream();
-                BufferedInputStream bis = new BufferedInputStream(is);
-                File file = new File(dir, ReceiveEmail.decodeText(bodyPart.getFileName()));
-                if (file.exists())
-                    file.delete();
-                BufferedOutputStream bos = new BufferedOutputStream(
-                        new FileOutputStream(file));
-                byte[] b = new byte[1024 * 4];
-                int len;
-                while ((len = bis.read(b)) != -1) {
-                    bos.write(b,0,len);
-                    downloadCount += len;
-                    publishProgress(2, downloadCount);
-                    bos.flush();
-                }
-                files.add(file);
-                bos.close();
-                bis.close();
+        BodyPart bodyPart = multipart.getBodyPart(1);
+        //某一个邮件体也有可能是由多个邮件体组成的复杂体
+        String disp = bodyPart.getDisposition();
+        if (disp != null && (disp.equalsIgnoreCase(Part.ATTACHMENT) || disp.equalsIgnoreCase(Part.INLINE))) {
+            InputStream is = bodyPart.getInputStream();
+            int size = bodyPart.getSize();
+            publishProgress(3, 0, size);
+            File file = new File(dir, ReceiveEmail.decodeText(bodyPart.getFileName()));
+            if (file.exists())
+                file.delete();
+            BufferedOutputStream bos = new BufferedOutputStream(
+                    new FileOutputStream(file));
+
+            byte[] b = new byte[1024];
+            int len;
+            while ((len = is.read(b)) != -1) {
+                bos.write(b, 0, len);
+                downloadCount += len;
+                publishProgress(2, downloadCount);
+                bos.flush();
             }
+            files.add(file);
+            bos.close();
         }
     }
 

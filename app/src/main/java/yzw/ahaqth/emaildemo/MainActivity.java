@@ -164,22 +164,28 @@ public class MainActivity extends AppCompatActivity {
         receiveEmail.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                final List<File> files = new ArrayList<>();
-                DowloadDialogFragment dowloadDialogFragment = DowloadDialogFragment.newInstant();
-                EmailDowloader emailDowloader = new EmailDowloader(getCacheDir().getAbsolutePath(),dowloadDialogFragment,files);
-                emailDowloader.setOnDowloadFinish(new EmailDowloader.OnDowloadFinish() {
-                    @Override
-                    public void onFinish(boolean isSuccess,String message) {
-                        if(isSuccess){
-                            receivedText.setText(files.get(0).getName());
-                            showToast("下载成功！\n"+message);
-                        }else{
-                            showToast("下载失败！\n"+message);
+                if(NetWorkTest.isNetworkConnected(MainActivity.this)){
+                    final List<File> files = new ArrayList<>();
+                    DowloadDialogFragment dowloadDialogFragment = DowloadDialogFragment.newInstant();
+                    EmailDowloader emailDowloader = new EmailDowloader(getCacheDir().getAbsolutePath(),dowloadDialogFragment,files);
+                    emailDowloader.setOnDowloadFinish(new EmailDowloader.OnDowloadFinish() {
+                        @Override
+                        public void onFinish(boolean isSuccess,String message) {
+                            if(isSuccess){
+                                String s = files.get(0).getName()+"\n"+message;
+                                receivedText.setText(s);
+                                showToast("下载成功！");
+                            }else{
+                                receivedText.setText(message);
+                                showToast("下载失败！");
+                            }
                         }
-                    }
-                });
-                dowloadDialogFragment.show(getSupportFragmentManager(),"dowsloading");
-                emailDowloader.execute();
+                    });
+                    dowloadDialogFragment.show(getSupportFragmentManager(),"dowsloading");
+                    emailDowloader.execute();
+                }else
+                    showToast("no network");
+
 //                new Thread(new Runnable() {
 //                    @Override
 //                    public void run() {
